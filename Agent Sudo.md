@@ -98,4 +98,68 @@ Ya tenemos el hash para poder crackearlo con **John the Ripper** y así poder te
 
 ¡Y aquí tenemos la contraseña para el zip!
 
-![Contenido del zip](images/Pasted%20image
+![Contenido del zip](images/Pasted%20image%2020251126193917.png)
+
+Aquí tenemos el archivo del zip que parece ser otra carta y dice que tienen que mandar una carta a `'QXJlYTUx'`. Parece ser un mensaje encodeado, así que voy a utilizar **CyberChef** para decodificar base64.
+
+![Cyberchef](images/Pasted%20image%2020251126194307.png)
+
+Vemos que el mensaje dice `Area51`.
+
+Ya tenemos "Area51", ahora solo nos queda buscar en la otra imagen que tenemos. Hay una herramienta llamada `steghide` que básicamente se usa para guardar datos dentro de una imagen (y en la room de TryHackMe hay una pregunta sobre "steg password").
+
+![Steghide](images/Pasted%20image%2020251126195052.png)
+
+Efectivamente, con `Area51` podemos acceder a los archivos de la imagen y vemos un `message.txt`.
+
+![Credenciales SSH](images/Pasted%20image%2020251126195235.png)
+
+Con este comando podemos ver los datos. Vemos un nombre **"james"** y una contraseña **"hackerrules!"**. Supongo que estas son las credenciales para conectarse vía SSH.
+
+### Acceso Inicial (SSH)
+
+![Login SSH](images/Pasted%20image%2020251126195552.png)
+
+Efectivamente, esas eran las credenciales. Ya estamos dentro de la máquina.
+
+![User Flag](images/Pasted%20image%2020251126195754.png)
+*(User Flag capturada)*
+
+---
+
+### Escalada de Privilegios
+
+![Sudo -l](images/Pasted%20image%2020251126201048.png)
+
+Investigando el sistema, encontramos una imagen interesante. Con `scp` descargamos la imagen que había en el usuario james a nuestra máquina local.
+
+![Imagen alien](images/Pasted%20image%2020251126201126.png)
+
+Esta es la imagen que aparece. Como en las preguntas de la room hay un apartado que dice **"reverse image search"**, traté de buscar información de la imagen en Google Images / Yandex.
+
+![Busqueda inversa](images/Pasted%20image%2020251126202405.png)
+
+Como las 2 primeras están en un idioma que no conozco, vamos a ver la de Fox News.
+
+![Noticia Fox News](images/Pasted%20image%2020251126202523.png)
+
+Aquí están todos los datos de la noticia y el nombre del incidente que parece ser **"Roswell alien autopsy"**.
+
+Volviendo a la máquina, vemos con `sudo -l` que podemos ejecutar `/bin/bash` como cualquier usuario (ALL) excepto root... ¿o sí?
+
+![Permisos sudo](images/Pasted%20image%2020251126204047.png)
+
+Vemos que dice `(ALL, !root) /bin/bash`. Pero cuando queremos ejecutar una bash como root no nos deja, eso está raro. Entonces vamos a buscar un exploit.
+
+![Version Sudo](images/Pasted%20image%2020251126204414.png)
+
+Revisando la versión de Sudo y buscando CVEs, encontramos: **CVE-2019-14287**.
+
+> En Sudo en versiones anteriores a 1.8.28, un atacante con acceso a una cuenta de Runas ALL sudoer puede omitir ciertas listas negras de políticas y módulos PAM de sesión... invocando sudo con un ID de usuario manipulado. Por ejemplo: `sudo -u #-1 /bin/bash`.
+
+![Verificacion version](images/Pasted%20image%2020251126204715.png)
+
+La versión es menor a la 1.8.28, así que podemos explotarla.
+
+```bash
+sudo -u#-1 /bin/bash
