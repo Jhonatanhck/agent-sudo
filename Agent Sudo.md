@@ -1,165 +1,177 @@
+Empezamos como siempre, con un escaneo basico de nmap 
 
-# Write-up: Agent Sudo (TryHackMe)
 
-Empezamos como siempre, con un escaneo básico de nmap:
+![](images/Pasted%20image%2020251126184952.png)
 
-![Escaneo de Nmap](images/Pasted%20image%2020251126184952.png)
+Vemos que hay 3 puertos abiertos 
 
-Vemos que hay 3 puertos abiertos:
+21 FPT
+22 ssh
+80 http
 
-* **21 FTP**
-* **22 SSH**
-* **80 HTTP**
+![](images/Pasted%20image%2020251126185200.png)
 
-![Puertos abiertos](images/Pasted%20image%2020251126185200.png)
+Probamos si ftp tiene el usuario anonymous configurado pero vemos que no, entonces vamos por la otra via (el servidor http)
 
-Probamos si FTP tiene el usuario `anonymous` configurado, pero vemos que no. Entonces vamos por la otra vía (el servidor HTTP).
+![](images/Pasted%20image%2020251126185346.png)
 
-![Pagina web](images/Pasted%20image%2020251126185346.png)
+Vemos esto en la pagina web, vemos que hay un usuario llamado user-agent y que nos lo dice un tal Agent R , parece que R es uno de los nombres claves que usan los usuarios 
 
-Vemos esto en la página web: hay un mensaje para un tal **"user-agent"** de parte de un **"Agent R"**. Parece que R es uno de los nombres claves que usan los usuarios.
+Intentemos Spoofearlo para ver que tal
 
-### Enumeración Web (User-Agent)
 
-Intentemos hacer *Spoofing* del User-Agent para ver qué tal.
+![](images/Pasted%20image%2020251126185634.png)
 
-![Curl User Agent](images/Pasted%20image%2020251126185634.png)
+Usamos curl y le indicamos con -A lo que queremos Spoofear que en este caso es la R y con -L lo que hacemos es que seguimos cualquier redireccion 
 
-Usamos `curl` y le indicamos con `-A` lo que queremos *Spoofear*, que en este caso es la **R**, y con `-L` seguimos cualquier redirección.
+Entonces vemos que R es un nombre de usuario pero no el que queremos, poniendonos en perspectiva de R hay 25 empleados y hay 26 letras del alfabeto, vamos a ver si asi es que estan organizados los nombres de los empleados 
 
-Vemos que R es un nombre de usuario pero no el que queremos. Poniéndonos en perspectiva de R, hay 25 empleados y 26 letras del alfabeto. Vamos a ver si así es que están organizados los nombres de los empleados.
+![](images/Pasted%20image%2020251126190045.png)
 
-Probamos con otras letras:
+Nada
 
-![Intento fallido 1](images/Pasted%20image%2020251126190045.png)
+![](images/Pasted%20image%2020251126190106.png)
 
-Nada.
+Nada por igual
 
-![Intento fallido 2](images/Pasted%20image%2020251126190106.png)
+![](images/Pasted%20image%2020251126190129.png)
 
-Nada por igual.
+ENCONTRAMOS ALGO
 
-![Encontramos a Chris](images/Pasted%20image%2020251126190129.png)
+vemos un nombre (chris) y podemos ver que le estan diciendo algo sobre un trato y que le diga al agente J y que tambien que cambie su contrasena porque es muy debil
 
-**¡ENCONTRAMOS ALGO!**
+Ahora que podemos hacer con el nombre que tenemos?
 
-Con la letra **C**, vemos un nombre (**chris**) y podemos ver que le están diciendo algo sobre un trato, que le diga al **agente J**, y también que cambie su contraseña porque es muy débil.
+servira para ssh o ftp?
 
-### Fuerza Bruta (FTP)
+probemos primero un ataque de fuerza bruta para ftp 
 
-¿Ahora qué podemos hacer con el nombre que tenemos? ¿Servirá para SSH o FTP?
-Probemos primero un ataque de fuerza bruta para FTP.
+![](images/Pasted%20image%2020251126191237.png)
 
-![Hydra FTP](images/Pasted%20image%2020251126191237.png)
+tuvimos suerte, ya tenemos las credenciales para ftp 
 
-Tuvimos suerte, ya tenemos las credenciales para FTP. Vamos a loguearnos.
+vamos a logearnos 
 
-![Login FTP](images/Pasted%20image%2020251126191532.png)
 
-Vemos estos 3 archivos, así que me los voy a llevar a mi máquina para poder verlos mejor.
+![](images/Pasted%20image%2020251126191532.png)
 
-![Descarga de archivos](images/Pasted%20image%2020251126191619.png)
+vemos estos 3 archivos asi que me los voy a llevar a mi maquina para poder verlos mejor
 
-El archivo que más me interesó fue la carta para el agente J. Vemos que dice que su contraseña está almacenada en la **"imagen falsa"** (*fake image*), eso es una pista.
+![](images/Pasted%20image%2020251126191619.png)
 
-### Esteganografía
+el archivo que mas me intereso fue este, la carta para el agente J, vemos que dice que su contrasena esta almacenada en la imagen falsa, eso es una pista
 
-Vamos a ver las imágenes primero.
+vamos a ver las imagenes primero
 
-**Esta es la primera imagen:**
-![Imagen 1](images/Pasted%20image%2020251126191829.png)
+Esta es la primera imagen
+![](images/Pasted%20image%2020251126191829.png)
 
-**Esta es la segunda imagen:**
-![Imagen 2](images/Pasted%20image%2020251126191905.png)
 
-No veo nada raro a simple vista. Usaremos una herramienta para ver datos binarios llamada `binwalk`.
+Esta es la segunda imagen
+![](images/Pasted%20image%2020251126191905.png)
 
-![Binwalk](images/Pasted%20image%2020251126192359.png)
+No veo nada de raro dentro de ellas 
 
-Utilizamos `binwalk` en la imagen "fake" (porque ahí dice la carta que está la contraseña) y vemos que tiene un archivo **ZIP** dentro. Con el parámetro `-e` podemos extraer archivos de la imagen.
+hay una manera de ver datos binarios con una herramienta llamada binwalk
 
-![Extraccion binwalk](images/Pasted%20image%2020251126192700.png)
+![](images/Pasted%20image%2020251126192359.png)
 
-Ya tenemos nuestro archivo extraído, vamos a ver qué tiene dentro.
+Utilizamos binwalk en la imagen "fake" porque es hay donde dice la carta que esta la contrasena y vemos que tiene un archivo zip que con el parametro -e podemos extraer archivos de la imagen 
 
-![Archivos extraidos](images/Pasted%20image%2020251126192824.png)
+![](images/Pasted%20image%2020251126192700.png)
 
-Tenemos esos archivos. Voy a descomprimir primero el `.zip`.
+ya tenemos nuestro archivo extraido, vamos a ver que tiene dentro
 
-![Unzip fallido](images/Pasted%20image%2020251126193440.png)
+![](images/Pasted%20image%2020251126192824.png)
 
-Cuando lo quiero descomprimir me pide una contraseña. Vamos a utilizar una herramienta muy buena para zips encriptados que es `zip2john`.
+tenemos esos archivos, voy a descomprimir primero el .zip
 
-![Zip2John](images/Pasted%20image%2020251126193726.png)
+![](images/Pasted%20image%2020251126193440.png)
 
-Ya tenemos el hash para poder crackearlo con **John the Ripper** y así poder tener los archivos.
+Cuando lo quiero descomprimir me pide una contrasena porque sabemos que esta encriptado 
+vamos a utilizar una herramienta muy buena para zip encriptados que es zip2john 
 
-![Cracking con John](images/Pasted%20image%2020251126193822.png)
+![](images/Pasted%20image%2020251126193726.png)
 
-¡Y aquí tenemos la contraseña para el zip!
+ya tenemos la hash para poder deshashearla con john y asi poder tener los archivos
 
-![Contenido del zip](images/Pasted%20image%2020251126193917.png)
+![](images/Pasted%20image%2020251126193822.png)
 
-Aquí tenemos el archivo del zip que parece ser otra carta y dice que tienen que mandar una carta a `'QXJlYTUx'`. Parece ser un mensaje encodeado, así que voy a utilizar **CyberChef** para decodificar base64.
+y aqui tenemos la contrasena para el zip
 
-![Cyberchef](images/Pasted%20image%2020251126194307.png)
 
-Vemos que el mensaje dice `Area51`.
+![](images/Pasted%20image%2020251126193917.png)
 
-Ya tenemos "Area51", ahora solo nos queda buscar en la otra imagen que tenemos. Hay una herramienta llamada `steghide` que básicamente se usa para guardar datos dentro de una imagen (y en la room de TryHackMe hay una pregunta sobre "steg password").
+aqui tenemos el archivo del zip que parece ser otra carta y dice que tienen que mandar una carta a 'QXJlYTUx' parece ser un mensaje encodeado asi que voy a utilizar una herramienta en linea que se llama cyberchef que basicamente desencodea los mensajes en base64
 
-![Steghide](images/Pasted%20image%2020251126195052.png)
+![](images/Pasted%20image%2020251126194307.png)
 
-Efectivamente, con `Area51` podemos acceder a los archivos de la imagen y vemos un `message.txt`.
+y vemos que el mensaje dice area51 ya decodificado en base64 con cyberchef
 
-![Credenciales SSH](images/Pasted%20image%2020251126195235.png)
+Ya tenemos area51 ahora solo nos queda buscar en la otra imagen que tenemos 
+hay algo que se llama steghide que basicamente se usa para guardar datos dentro de una imagen
+y como en la room de Tryhackme hay una pregunta que se llama steg password supongo que eso debe ser
 
-Con este comando podemos ver los datos. Vemos un nombre **"james"** y una contraseña **"hackerrules!"**. Supongo que estas son las credenciales para conectarse vía SSH.
+![](images/Pasted%20image%2020251126195052.png)
+efectivamente con Area51 podemos acceder a los archivos de la imagen 
+y vemos un message.txt
 
-### Acceso Inicial (SSH)
+![](images/Pasted%20image%2020251126195235.png)
 
-![Login SSH](images/Pasted%20image%2020251126195552.png)
+con este comando podemos descarganos los datos 
+vemos un nombre "james" y una contrasena "hackerrules!" otra vez la room de tryhackme dice ssh password asi que supongo que estas son las credenciales para conectarse via ssh
 
-Efectivamente, esas eran las credenciales. Ya estamos dentro de la máquina.
+![](images/Pasted%20image%2020251126195552.png)
 
-![User Flag](images/Pasted%20image%2020251126195754.png)
-*(User Flag capturada)*
+Y efectivamente esas eran las credenciales para ssh
+ya estamos dentro de la maquina ahora va la parte de escalada de privilegios 
 
----
+![](images/Pasted%20image%2020251126195754.png)
+La flag
+# Escalada de privilegios
 
-### Escalada de Privilegios
+![](images/Pasted%20image%2020251126201048.png)
 
-![Sudo -l](images/Pasted%20image%2020251126201048.png)
+con este comando descargamos la imagen que habia en el usuario james y ahora podemos verla
 
-Investigando el sistema, encontramos una imagen interesante. Con `scp` descargamos la imagen que había en el usuario james a nuestra máquina local.
+![](images/Pasted%20image%2020251126201126.png)
 
-![Imagen alien](images/Pasted%20image%2020251126201126.png)
+esta es la imagen que aparece 
 
-Esta es la imagen que aparece. Como en las preguntas de la room hay un apartado que dice **"reverse image search"**, traté de buscar información de la imagen en Google Images / Yandex.
+y como en la preguntas de la room hay un apartado que dice reverse image search trate de buscar informacion de la imagen en esta pagina que ayuda a ver noticias de la imagen 
 
-![Busqueda inversa](images/Pasted%20image%2020251126202405.png)
+![](images/Pasted%20image%2020251126202405.png)
 
-Como las 2 primeras están en un idioma que no conozco, vamos a ver la de Fox News.
+como las 2 primeras estan en un idioma que no conozco vamos a ver la de foxnews que seguro estan en ingles
 
-![Noticia Fox News](images/Pasted%20image%2020251126202523.png)
+![](images/Pasted%20image%2020251126202523.png)
 
-Aquí están todos los datos de la noticia y el nombre del incidente que parece ser **"Roswell alien autopsy"**.
+y aqui estan todos los datos de la noticia y el nombre del incidente que parece ser "Roswell alien autopsy"
 
-Volviendo a la máquina, vemos con `sudo -l` que podemos ejecutar `/bin/bash` como cualquier usuario (ALL) excepto root... ¿o sí?
+![](images/Pasted%20image%2020251126204047.png)
 
-![Permisos sudo](images/Pasted%20image%2020251126204047.png)
+volviendo a la maquina vemos que puede ejecutar james como root 
 
-Vemos que dice `(ALL, !root) /bin/bash`. Pero cuando queremos ejecutar una bash como root no nos deja, eso está raro. Entonces vamos a buscar un exploit.
+![](images/Pasted%20image%2020251126204203.png)
 
-![Version Sudo](images/Pasted%20image%2020251126204414.png)
+pero vemos que cuando queremos ejecutar una bash como root no nos deja, eso esta raro
 
-Revisando la versión de Sudo y buscando CVEs, encontramos: **CVE-2019-14287**.
+entonces vamos a buscar un exploit
 
-> En Sudo en versiones anteriores a 1.8.28, un atacante con acceso a una cuenta de Runas ALL sudoer puede omitir ciertas listas negras de políticas y módulos PAM de sesión... invocando sudo con un ID de usuario manipulado. Por ejemplo: `sudo -u #-1 /bin/bash`.
+![](images/Pasted%20image%2020251126204414.png)
+veamos como podemos ejecutar este
 
-![Verificacion version](images/Pasted%20image%2020251126204715.png)
+segun [https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-14287](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-14287&ref=blog.qz.sg)
 
-La versión es menor a la 1.8.28, así que podemos explotarla.
+__En Sudo en versiones anteriores a 1.8.28, un atacante con acceso a una cuenta de Runas ALL sudoer puede omitir ciertas listas negras de políticas y módulos PAM de sesión, y puede causar un registro incorrecto, invocando sudo con un ID de usuario manipulado. Por ejemplo, esto permite la derivación de ! Configuración de raíz, y USER = registro, para un `sudo -u \#$((0xffffffff))`Comando.__
 
-```bash
-sudo -u#-1 /bin/bash
+
+![](images/Pasted%20image%2020251126204715.png)
+
+vamos, es menor a la 1.8.28, asi que podemos explotarla con el exploit que encontramos arriba
+
+![](images/Pasted%20image%2020251126204943.png)
+
+y listo ya somos root y encotramos la flag
+
+PWNED
